@@ -16,3 +16,14 @@ jupyter notebook
 ```
 
 Lalu pilih kernel bernama gophernotes dan mulai koding Go langsung di notebook.
+
+## 🪟 Untuk Windows
+
+Jalankan PowerShell dengan hak administrator, lalu:
+
+```powershell
+iwr -useb https://raw.githubusercontent.com/mrbagir/script-install-gophernotes/main/install_gophernotes_windows.ps1 | iex
+```
+
+Atau unduh file dan klik kanan Run with PowerShell.
+
