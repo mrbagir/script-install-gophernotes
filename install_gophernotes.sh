@@ -1,32 +1,46 @@
 #!/bin/bash
 
-set -e
+echo -e "\n=== Gophernotes Linux Installer ==="
 
-echo "🛠️ Menginstal Jupyter + Gophernotes..."
+# 1. Check if pip is installed
+if ! command -v pip &> /dev/null; then
+    echo -e "[Error] pip is not installed" >&2
+    exit 1
+fi
 
-# Install dependencies
-sudo apt update
-sudo apt install -y golang git pkg-config libzmq3-dev gcc g++ python3-pip
+# 2. Installing Jupyter Notebook
+echo "Installing Jupyter Notebook..."
+pip install --upgrade pip
+pip install jupyter
 
-# Setup Go path
-export GOPATH=$HOME/go
-export PATH=$PATH:$GOPATH/bin
-grep -q "GOPATH" ~/.bashrc || echo -e '\n# GOPATH\nexport GOPATH=$HOME/go\nexport PATH=$PATH:$GOPATH/bin' >> ~/.bashrc
+# 3. Installing Gophernotes kernel for Jupyter
+echo "Installing Gophernotes kernel for Jupyter..."
+GO111MODULE=on go install github.com/gopherdata/gophernotes@latest
 
-# Install Jupyter
-pip3 install --upgrade pip
-pip3 install notebook
+# 4. Set up paths
+GOPATH="$HOME/go"
+KERNEL_PATH="$GOPATH/github.com/gopherdata/gophernotes/kernel"
+JUPYTER_KERNEL_PATH="$HOME/.local/share/jupyter/kernels/gophernotes"
 
-# Install gophernotes
-mkdir -p ~/dev && cd ~/dev
-git clone https://github.com/gopherdata/gophernotes.git || (cd gophernotes && git pull)
-cd gophernotes
-go install .
+# 5. Check if GOPATH exists
+if [ ! -d "$GOPATH" ]; then
+    echo -e "[Error] GOPATH not found at $GOPATH. Please ensure Go is installed correctly." >&2
+    exit 1
+fi
 
-# Setup Jupyter kernel
-mkdir -p ~/.local/share/jupyter/kernels/gophernotes
-cp -r kernel/* ~/.local/share/jupyter/kernels/gophernotes
-chmod +x ~/.local/share/jupyter/kernels/gophernotes/kernel
+# 6. Check if the kernel directory exists and move files to Jupyter's kernels path
+if [ -d "$KERNEL_PATH" ]; then
+    echo "Setting up Gophernotes kernel..."
+    if [ ! -d "$JUPYTER_KERNEL_PATH" ]; then
+        echo "Creating kernel directory at $JUPYTER_KERNEL_PATH..."
+        mkdir -p "$JUPYTER_KERNEL_PATH"
+    fi
+    cp -r "$KERNEL_PATH"/* "$JUPYTER_KERNEL_PATH"
+else
+    echo -e "[Error] Kernel files not found at $KERNEL_PATH. Installation of Gophernotes may have failed." >&2
+    exit 1
+fi
 
-echo -e "\n✅ Gophernotes berhasil diinstal!"
-echo "🚀 Jalankan dengan: jupyter notebook"
+echo -e "\nInstallation completed!"
+echo "To run, use: jupyter notebook"
+echo "Choose the kernel named 'gophernotes' from the kernel selection menu."
