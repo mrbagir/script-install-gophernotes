@@ -1,43 +1,44 @@
-# install_gophernotes_windows.ps1
-# Jalankan script ini dengan Run as Administrator
-
 Write-Host "`n=== Gophernotes Windows Installer ===" -ForegroundColor Cyan
 
-# 1. Cek & Install Chocolatey jika belum ada
-if (-not (Get-Command choco -ErrorAction SilentlyContinue)) {
-    Write-Host "⚙️ Installing Chocolatey..."
-    Set-ExecutionPolicy Bypass -Scope Process -Force
-    Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-} else {
-    Write-Host "✅ Chocolatey sudah terpasang"
+# 1. Check if pip is installed
+if (-not (Get-Command pip -ErrorAction SilentlyContinue)) {
+    Write-Host "[Error] pip is not installed" -ForegroundColor Red
+    exit 1
 }
 
-# 2. Install dependensi
-choco install golang python git -y
-choco install zeromq -y
-
-# Refresh env
-$env:Path += ";$env:ProgramFiles\Go\bin"
-
-# 3. Install Jupyter via pip
-Write-Host "`n📦 Menginstal Jupyter Notebook..."
+# 2. Installing Jupyter Notebook
+Write-Host "Installing Jupyter Notebook..."
 pip install --upgrade pip
-pip install notebook
+pip install jupyter
 
-# 4. Clone dan install gophernotes
-Write-Host "`n🐹 Clone dan install Gophernotes..."
+# 3. Installing Gophernotes kernel for Jupyter
+Write-Host "Installing Gophernotes kernel for Jupyter..."
+go install github.com/gopherdata/gophernotes@latest
+
+# 4. Set up paths
 $gopath = "$env:USERPROFILE\go"
-$gophernotesDir = "$env:USERPROFILE\gophernotes"
+$kernelPath = "$gopath\github.com\gopherdata\gophernotes\kernel"
+$jupyterKernelPath = "$env:APPDATA\jupyter\kernels\gophernotes"
 
-git clone https://github.com/gopherdata/gophernotes.git $gophernotesDir
-cd $gophernotesDir
-go install .
+# 5. Check if GOPATH exists
+if (-not (Test-Path $gopath)) {
+    Write-Host "[Error] GOPATH not found at $gopath. Please ensure Go is installed correctly." -ForegroundColor Red
+    exit 1
+}
 
-# 5. Copy kernel ke jupyter
-$kernelPath = "$env:APPDATA\jupyter\kernels\gophernotes"
-mkdir $kernelPath -Force
-Copy-Item "$gophernotesDir\kernel\*" $kernelPath -Recurse -Force
+# 6. Check if the kernel directory exists and move files to Jupyter's kernels path
+if (Test-Path $kernelPath) {
+    Write-Host "Setting up Gophernotes kernel..."
+    if (-not (Test-Path $jupyterKernelPath)) {
+        Write-Host "Creating kernel directory at $jupyterKernelPath..."
+        New-Item -ItemType Directory -Path $jupyterKernelPath -Force
+    }
+    Move-Item -Path "$kernelPath\*" -Destination $jupyterKernelPath -Force
+} else {
+    Write-Host "[Error] Kernel files not found at $kernelPath. Installation of Gophernotes may have failed." -ForegroundColor Red
+    exit 1
+}
 
-Write-Host "`n✅ Instalasi selesai!"
-Write-Host "🚀 Jalankan dengan: jupyter notebook"
-Write-Host "📓 Pilih kernel bernama 'gophernotes'"
+Write-Host "`nInstallation completed!"
+Write-Host "To run, use: jupyter notebook"
+Write-Host "Choose the kernel named 'Go' from the kernel selection menu."
